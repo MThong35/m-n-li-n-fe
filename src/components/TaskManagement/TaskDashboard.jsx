@@ -1,5 +1,5 @@
 import Card from "./TaskCard";
-import Chart from "./TaskChart";
+// import Chart from "./TaskChart";
 import React, { useEffect, useState } from "react";
 import taskService from "../../services/apiServices/tasklistAPI"; // Assuming taskService is correctly set up
 
@@ -8,7 +8,7 @@ const Dashboard = () => {
   const [completedTasks, setCompletedTasks] = useState([]);
   const [inProgrssTasks, setinProgrssTasks] = useState([]);
   const [pendingTasks, setPendingTasks] = useState([]);
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -19,17 +19,23 @@ const Dashboard = () => {
         const taskList = await taskService.GetListTask(); // Fetching tasks from the API
 
         // Filter completed tasks
-        const completedTasks = taskList.filter((task) => task.taskStatus === "Completed");
+        const completedTasks = taskList.filter(
+          (task) => task.status === "Completed"
+        );
         const countCompletedTasks = completedTasks.length;
 
         // Filter in-progress tasks
-        const inProgressTasks = taskList.filter((task) => task.taskStatus === "In Progress" || task.taskStatus === "In progress");
+        const inProgressTasks = taskList.filter(
+          (task) =>
+            task.status === "In Progress" || task.status === "In progress"
+        );
         const countInProgressTasks = inProgressTasks.length;
 
         // Filter pending tasks
-        const pendingTasks = taskList.filter((task) => task.taskStatus === "Pending");
+        const pendingTasks = taskList.filter(
+          (task) => task.status === "Pending"
+        );
         const countPendingTasks = pendingTasks.length;
-
 
         setPendingTasks(countPendingTasks);
         setinProgrssTasks(countInProgressTasks);
@@ -53,7 +59,6 @@ const Dashboard = () => {
     return <p>{error}</p>;
   }
 
- 
 
   return (
     <div className="p-4 grid grid-cols-4 gap-4">
@@ -61,10 +66,6 @@ const Dashboard = () => {
       <Card title="In Progress Tasks" count={inProgrssTasks} />
       <Card title="Pending Tasks" count={pendingTasks} />
       <Card title="Total Tasks" count={tasks.length} />
-      <Chart title="Incomplete Tasks by Section" />
-      <Chart title="All Tasks by Completion Status" />
-      <Chart title="Upcoming Tasks by Assignee" />
-      <Chart title="Task Completion Over Time" />
     </div>
   );
 };

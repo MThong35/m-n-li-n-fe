@@ -1,38 +1,61 @@
 import {
   ChevronUpDownIcon,
-  PencilIcon,
+  XMarkIcon,
   PlusIcon,
-  TrashIcon,
+  PauseIcon,
+  CheckIcon,
+  CheckCircleIcon,
+  XCircleIcon,
 } from "@heroicons/react/24/outline";
 import React from "react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import taskService from "../../services/apiServices/tasklistAPI"; // Assuming taskService is correctly set up
+import releasingService from "../../services/apiServices/releasingAPI"; // Assuming releasingService is correctly set up
 import { ToastContainer, toast } from "react-toastify";
 import { jwtDecode } from "jwt-decode";
 
-// Table headers for tasks
+// Table headers for releasing
 const TABLE_HEAD = [
-  "Task Name",
-  "Assigned To",
+  "No.",
+  "Title",
+  "Aprroved?",
+  "Approved at",
+  "Approved by",
+  "License",
+  "Publisher",
   "Status",
-  "Priority",
-  "Progress (%)",
-  "Assigned At",
-  "Deadline",
-  "Remaining Days",
-  "Actions",
+  "Action",
 ];
+// Utility function to format date
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
 
-const TaskTable = () => {
-  const [tasks, setTasks] = useState([]);
+  if (isNaN(date)) return "Invalid Date"; // Handle invalid date strings
+
+  // Format the date to 'YYYY:MMM:DD'
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short", // "MMM"
+    day: "2-digit", // "DD"
+  });
+
+  const parts = formatter.formatToParts(date);
+  const year = parts.find((part) => part.type === "year").value;
+  const month = parts.find((part) => part.type === "month").value;
+  const day = parts.find((part) => part.type === "day").value;
+
+  return `${year} ${month} ${day}`;
+};
+
+const PublishingTable = () => {
+  const [releasing, setReleasing] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const authToken = sessionStorage.getItem("authToken");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleTaskAdded = () => {
+  const handleReleasingAdded = () => {
     try {
       if (!authToken) {
         // Redirect to login page if authToken is missing
@@ -50,7 +73,7 @@ const TaskTable = () => {
           if (userRole !== "Admin" && userRole !== "Manager") {
             toast.error("You are not authorized to add new user.");
           } else {
-            navigate("/admin/addtask"); // Redirect to Add User page
+            navigate("/admin/addreleasing"); // Redirect to Add User page
           }
         } catch (error) {
           // Handle decoding errors (e.g., if authToken is invalid)
@@ -64,7 +87,7 @@ const TaskTable = () => {
     }
   };
 
-  const handleUpdateTask = async (assignID) => {
+  const handleApprovedReleasing = async (releasing) => {
     // Delete user with userId
     try {
       if (!authToken) {
@@ -87,7 +110,24 @@ const TaskTable = () => {
             if (userRole !== "Admin" && userRole !== "Manager") {
               toast.error("You are not authorized to add new user.");
             } else {
-              navigate(`/admin/edittask?id=${assignID}`);
+              // navigate(`/admin/editreleasing?id=${releasing.comicId}`);
+              if (!releasing.isApprove || releasing.status === "Pending") {
+                console.log(`Releasing:`);
+                releasing.isApprove = !releasing.isApprove;
+                releasing.approveAt = new Date();
+
+                if (releasing.status === "Pending")
+                  releasing.status = "Approved";
+
+                console.log(releasing);
+                const updatedReleasing = await releasingService.UpdateReleasing(
+                  releasing
+                );
+                console.log(updatedReleasing);
+
+                // reload data
+                fetchReleasing();
+              }
             }
           }
         } catch (error) {
@@ -101,32 +141,7 @@ const TaskTable = () => {
       toast.error(error.response?.data?.description || "Registration failed.");
     }
   };
-
-  const fetchTasks = async () => {
-    try {
-      setLoading(true);
-      const tasksList = await taskService.GetListTask();
-
-      setTasks(tasksList);
-      console.log(`Result:`);
-      console.log(tasks);
-      setLoading(false);
-    } catch (err) {
-      setError("Failed to fetch Tasks.");
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  // Handle search input change
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-  const handleDeleteTask = async (assignID) => {
+  const handleRejectedReleasing = async (releasing) => {
     // Delete user with userId
     try {
       if (!authToken) {
@@ -145,17 +160,29 @@ const TaskTable = () => {
           if (userRole !== "Admin" && userRole !== "Manager") {
             toast.error("You are not authorized to delete users.");
           } else {
-            const response = await taskService.deleteTask(assignID);
-            console.log("rep:", response);
-
-            if (response) {
-              toast.success(`Delete ${response.taskName} successfully!`);
-              // delay 3s to reload the page
-              setTimeout(() => {
-                fetchTasks();
-              }, 3500);
+            // Check if user has an admin role
+            if (userRole !== "Admin" && userRole !== "Manager") {
+              toast.error("You are not authorized to add new user.");
             } else {
-              toast.error("Delete failed");
+              if (releasing.isApprove || releasing.status === "Approved") {
+                console.log(`Releasing:`);
+                releasing.isApprove = !releasing.isApprove;
+                releasing.approveAt = new Date();
+                
+                // if(releasing.userID == null) releasing.userID = ;
+
+                if (releasing.status === "Approved")
+                  releasing.status = "Pending";
+
+                console.log(releasing);
+                const updatedReleasing = await releasingService.UpdateReleasing(
+                  releasing
+                );
+                console.log(updatedReleasing);
+
+                // reload data
+                fetchReleasing();
+              }
             }
           }
         } catch (error) {
@@ -170,22 +197,34 @@ const TaskTable = () => {
     }
   };
 
+  const fetchReleasing = async () => {
+    try {
+      setLoading(true);
+      const releasingList = await releasingService.GetListReleasing();
+      console.log(`Result:`);
+      console.log(releasingList);
+      setReleasing(releasingList);
+
+      console.log(releasing);
+      setLoading(false);
+    } catch (err) {
+      setError("Failed to fetch Releasings.");
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReleasing();
+  }, []);
+
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
   // Filter users based on the search query
-  const handleSearchTask = () => {
-    return tasks.filter((task) => {
-      return (
-        (task.taskName &&
-          task.taskName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (task.userFirstName &&
-          task.userFirstName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (task.userLastName &&
-          task.userLastName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (task.priority &&
-          task.priority.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (task.status &&
-          task.status.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    });
+  const handleSearchReleasing = () => {
+    return releasing;
   };
 
   return (
@@ -194,53 +233,19 @@ const TaskTable = () => {
         <div className="mb-8 flex items-center justify-between gap-8">
           <div>
             <h1 className="text-2xl font-semibold text-gray-700">
-              Tasks Overview
+              Publishing Overview
             </h1>
-            <p className="text-gray-500 text-lg">Manage and track all tasks</p>
-          </div>
-
-          <label
-            htmlFor="default-search"
-            className="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white"
-          >
-            Search
-          </label>
-
-          <div className="relative">
-            <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-              <svg
-                className="w-4 h-4 text-gray-500 dark:text-gray-400"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"
-                />
-              </svg>
-            </div>
-            <input
-              type="search"
-              id="default-search"
-              className="block w-96 p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-              placeholder="Search User..."
-              value={searchQuery}
-              onChange={handleSearchChange}
-              required
-            />
+            <p className="text-gray-500 text-lg">
+              Manage and track all releasing
+            </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2">
             <button
-              onClick={handleTaskAdded}
+              onClick={handleReleasingAdded}
               className="flex items-center gap-2 text-sm px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
-              <PlusIcon className="h-4 w-4" /> New Task
+              <PlusIcon className="h-4 w-4" /> New request
             </button>
           </div>
         </div>
@@ -266,76 +271,84 @@ const TaskTable = () => {
               </tr>
             </thead>
             <tbody>
-              {handleSearchTask().map((task, index) => {
-                const isLast = index === tasks.length - 1;
+              {handleSearchReleasing().map((releasing, index) => {
+                const isLast = index === releasing.length - 1;
                 const classes = isLast ? "p-4" : "p-4 border-b border-gray-100";
 
                 return (
-                  <tr key={task.assignID}>
+                  <tr key={releasing.comicId}>
                     <td className={classes}>
                       <span className="text-gray-700 font-medium">
-                        {task.taskName}
-                      </span>
-                    </td>
-                    <td className={classes}>
-                      <span className="text-gray-700">
-                        {(task.userFirstName || "") +
-                          " " +
-                          (task.userLastName || "")}
+                        {releasing.comicId}
                       </span>
                     </td>
 
                     <td className={classes}>
+                      <span className="text-gray-700">
+                        {releasing.comicTitle}
+                      </span>
+                    </td>
+
+                    <td className={classes}>
+                      <span className="text-gray-700">
+                        {releasing.isApprove ? (
+                          <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <XCircleIcon className="h-5 w-5 text-red-500" />
+                        )}
+                      </span>
+                    </td>
+
+                    <td className={classes}>
+                      <span className="text-gray-700">
+                        {releasing.approveAt
+                          ? formatDate(releasing.approveAt)
+                          : ""}
+                      </span>
+                    </td>
+                    <td className={classes}>
+                      <span className="text-gray-700">
+                        {releasing.userID ? releasing.userID : "N/A"}
+                      </span>
+                    </td>
+                    <td className={classes}>
+                      <span className="text-gray-700">
+                        {releasing.licenseID}
+                      </span>
+                    </td>
+
+                    <td className={classes}>
+                      <span className="text-gray-700">
+                        {releasing.releasingID}
+                      </span>
+                    </td>
+                    <td className={classes}>
                       <span
                         className={`inline-block px-2 py-1 text-xs font-medium rounded ${
-                          task.status === "Completed"
+                          releasing.status === "Approved"
                             ? "bg-green-100 text-green-700"
-                            : task.status === "In Progress" ||
-                              task.status === "In progress"
+                            : releasing.status === "Pending" ||
+                              releasing.status === "In progress"
                             ? "bg-yellow-100 text-yellow-700"
-                            : "bg-red-100 text-red-700"
+                            : "bg-blue-100 text-blue-700"
                         }`}
                       >
-                        {task.status}
+                        {releasing.status}
                       </span>
                     </td>
-                    <td className={classes}>
-                      <span className="text-gray-700">{task.priority}</span>
-                    </td>
-                    <td className={classes}>
-                      <span className="text-gray-700">{task.progress}%</span>
-                    </td>
-                    <td className={classes}>
-                      <span className="text-gray-700">
-                        {task.assignedAt ? new Date(task.assignedAt).toLocaleDateString() : null}
-                      </span>
-                    </td>
-                    <td className={classes}>
-                      <span className="text-gray-700">
-                        {new Date(task.deadline).toLocaleDateString()}
-                      </span>
-                    </td>
-                    <td className={classes}>
-                      <span className="text-gray-700">
-                        {Math.ceil(
-                          (new Date(task.deadline) - new Date()) /
-                            (1000 * 60 * 60 * 24)
-                        )}{" "}
-                        days
-                      </span>
-                    </td>
+
                     <td className={`${classes} flex items-center gap-2`}>
                       <button
-                        onClick={() => handleUpdateTask(task.taskId)}
+                        onClick={() => handleApprovedReleasing(releasing)}
                         className="text-blue-500 hover:text-blue-700"
                       >
-                        <PencilIcon className="h-4 w-4" />
+                        <CheckIcon className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteTask(task.taskId)}
+                        onClick={() => handleRejectedReleasing(releasing)}
                         className="text-red-500 hover:text-red-700"
                       >
-                        <TrashIcon className="h-4 w-4" />
+                        <XMarkIcon className="h-4 w-4" />
                       </button>
                     </td>
                   </tr>
@@ -350,4 +363,4 @@ const TaskTable = () => {
   );
 };
 
-export default TaskTable;
+export default PublishingTable;

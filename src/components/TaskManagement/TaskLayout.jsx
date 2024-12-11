@@ -11,11 +11,13 @@ export default function Layout() {
       <div className="flex bg-neutral-200">
         <Sidebar />
       </div>
-      
+
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-y-scroll">
         <Header />
-        <div className="p-2"> {/* Reduced padding here */}
+        <div className="p-2">
+          {" "}
+          {/* Reduced padding here */}
           <Dashboard />
           <TaskDashboard />
         </div>
