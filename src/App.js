@@ -32,7 +32,6 @@ import Unauthorized from "./pages/Error/Unauthorized";
 import NotFound from "./pages/Error/NotFound";
 
 function App() {
-  <link href="./output.css" rel="stylesheet"></link>;
   return (
     <Router>
       <Routes>
@@ -50,29 +49,25 @@ function App() {
         <Route path="/admin/editcomic" element={<EditComic />} />
         <Route path="/admin/comicinfo" element={<ComicInfo />} />
         <Route path="/admin/comicinfo/comicEditor" element={<ComicEditor />} />
-        
-        {/*Task management*/}
+        {/* Task management */}
         <Route path="/admin/taskmanage" element={<Task />} />
         <Route path="/admin/tasklist" element={<TaskList />} />
         <Route path="/admin/addtask" element={<AddTask />} />
         <Route path="/admin/edittask" element={<EditTask />} />
-
-        {/*Task management*/}
+        {/* Publishing */}
         <Route path="/admin/publishing" element={<PublishingPage />} />
-        {/* <Route path="/admin/tasklist" element={<TaskList />} /> */}
-
-        {/*User management*/}
+        {/* User management */}
         <Route path="/admin/usermanage" element={<UserManagement />} />
         <Route path="/admin/adduser" element={<AddUser />} />
         <Route path="/admin/edituser" element={<EditUser />} />
-        {/* <Route path="/admin/deleteuser" element={<DeleteUser />} /> */}
         <Route path="/admin/userinfo" element={<UserInfo />} />
-        {/*Exception Pages*/}
+        {/* Exception Pages */}
         <Route path="/unauthorized" element={<Unauthorized />} />
-        <Route path="*" component={NotFound} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );
 }
+
 
 export default App;
